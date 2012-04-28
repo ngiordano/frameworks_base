@@ -100,12 +100,7 @@ static int32_t getColorFormat(const char* colorFormat) {
     }
 
     if (!strcmp(colorFormat, CameraParameters::PIXEL_FORMAT_YUV420SP)) {
-#ifdef EXYNOS4210_ENHANCEMENTS
-        static const int OMX_SEC_COLOR_FormatNV12LPhysicalAddress = 0x7F000002;
-        return OMX_SEC_COLOR_FormatNV12LPhysicalAddress;
-#else
         return OMX_COLOR_FormatYUV420SemiPlanar;
-#endif
     }
 
     if (!strcmp(colorFormat, CameraParameters::PIXEL_FORMAT_YUV422I)) {
@@ -433,6 +428,7 @@ status_t CameraSource::checkFrameRate(
 
     LOGV("checkFrameRate");
     int32_t frameRateActual = params.getPreviewFrameRate();
+    LOGE("CameraSource frameRateActual %d", frameRateActual);
     if (frameRateActual < 0) {
         LOGE("Failed to retrieve preview frame rate (%d)", frameRateActual);
         return UNKNOWN_ERROR;
@@ -440,7 +436,13 @@ status_t CameraSource::checkFrameRate(
 
     // Check the actual video frame rate against the target/requested
     // video frame rate.
-    if (frameRate != -1 && (frameRateActual - frameRate) != 0) {
+    int32_t frameRateDiff = frameRateActual - frameRate;
+#ifdef QCOM_HARDWARE
+    //HTC Cameras incorrectly report 31 fps instead of 30.
+    frameRateDiff = frameRateDiff > 1 ? frameRateDiff : 0;
+#endif
+    LOGE("CameraSource frameRate %d", frameRate);
+    if (frameRate != -1 && (frameRateDiff) != 0) {
         LOGE("Failed to set preview frame rate to %d fps. The actual "
                 "frame rate is %d", frameRate, frameRateActual);
         return UNKNOWN_ERROR;
